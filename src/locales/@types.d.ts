@@ -46,7 +46,7 @@ type KGlobal =
 type KFooter =
 | 'about'
 | 'resources'
-| 'discord'
+| 'socials'
 
 export interface GlobalI18n extends PathAccessibleObject {
   server: {
