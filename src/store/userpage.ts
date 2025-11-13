@@ -1,7 +1,7 @@
 import type { inferRouterError, inferRouterOutputs } from '@trpc/server'
 import { defineStore } from 'pinia'
 import type { WatchStopHandle } from 'vue'
-import type { LeaderboardRankingSystem } from '../def/common'
+import type { LeaderboardRankingSystem } from '$active'
 import type { RouteLocationRaw } from '#vue-router'
 import { type SwitcherPropType } from '~/composables/useSwitcher'
 import { Mode, Ruleset } from '~/def'
@@ -22,10 +22,33 @@ export default defineStore('userpage', () => {
   const switcherCtx = useLeaderboardSwitcher()
   const [switcher, setSwitcher] = switcherCtx
 
-  const currentStatistic = shallowRef<ReturnType<typeof computeStatistic> | null>(null)
-  const currentRankingSystem = shallowRef<ReturnType<typeof computeRankingSystem> | null>(null)
+  const currentStatistic = shallowRef<RouterOutput['user']['statistic']>()
+  const statisticLoadingState = shallowRef(false)
+  const currentRankingSystem = shallowRef<ReturnType<typeof computeRankingSystem>>()
 
   let dispose: WatchStopHandle[] = []
+
+  async function getStatistic() {
+    if (!user.value) {
+      return
+    }
+    statisticLoadingState.value = true
+    try {
+      if (!hasRuleset(switcher.mode, switcher.ruleset)) {
+        return await app.$client.user.statistic.query({ id: user.value!.id, mode: Mode.Osu, ruleset: Ruleset.Standard, rankingSystem: switcher.rankingSystem })
+      }
+      return await app.$client.user.statistic.query({ id: user.value!.id, mode: switcher.mode, ruleset: switcher.ruleset, rankingSystem: switcher.rankingSystem })
+    }
+    catch (e) {
+      console.error(e)
+      error.value = {
+        message: (e as RouterError).message,
+      }
+    }
+    finally {
+      statisticLoadingState.value = false
+    }
+  }
 
   async function initServer(initSwitcher?: SwitcherPropType<LeaderboardRankingSystem>) {
     const route = useRoute('user-handle')
@@ -45,7 +68,7 @@ export default defineStore('userpage', () => {
         })
       }
 
-      currentStatistic.value = computeStatistic()
+      currentStatistic.value = await getStatistic()
       currentRankingSystem.value = computeRankingSystem()
       error.value = null
     }
@@ -64,8 +87,8 @@ export default defineStore('userpage', () => {
         watch([
           () => switcher.mode,
           () => switcher.ruleset,
-        ], () => {
-          currentStatistic.value = computeStatistic()
+        ], async () => {
+          currentStatistic.value = await getStatistic()
           currentRankingSystem.value = computeRankingSystem()
         }),
         watch(() => switcher.rankingSystem, () => {
@@ -96,7 +119,7 @@ export default defineStore('userpage', () => {
         handle: `${route.params.handle}`,
       })
       user.value = u
-      currentStatistic.value = computeStatistic()
+      currentStatistic.value = await getStatistic()
       currentRankingSystem.value = computeRankingSystem()
       error.value = null
     }
@@ -108,11 +131,6 @@ export default defineStore('userpage', () => {
     }
   }
 
-  function computeStatistic() {
-    return hasRuleset(switcher.mode, switcher.ruleset)
-      ? user.value?.statistics?.[switcher.mode][switcher.ruleset]
-      : user.value?.statistics?.[Mode.Osu][Ruleset.Standard]
-  }
   function computeRankingSystem() {
     return currentStatistic.value?.[switcher.rankingSystem]
   }
@@ -127,6 +145,7 @@ export default defineStore('userpage', () => {
     switcher,
     setSwitcher,
     currentStatistic,
+    statisticLoadingState,
     currentRankingSystem,
   }
 })

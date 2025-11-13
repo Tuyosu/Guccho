@@ -1,46 +1,8 @@
-import type { U2I } from './internal-utils'
-import type {
-  ModeRulesetRankingSystemDef,
-} from '.'
+import type { Rank } from '.'
 
-export type ActiveMode = keyof ModeRulesetRankingSystemDef
-export type ActiveRuleset = keyof U2I<ModeRulesetRankingSystemDef[ActiveMode]>
+export type LeaderboardScoreRankingSystem = Rank.RankedScore | Rank.TotalScore
+export type PPRankingSystem = Rank.PPv1 | Rank.PPv2
+export type LeaderboardPPRankingSystem = PPRankingSystem
+export type LeaderboardRankingSystem = LeaderboardPPRankingSystem | LeaderboardScoreRankingSystem
 
-export type AvailableRuleset<M extends ActiveMode, Available = ActiveRuleset> =
-  keyof ModeRulesetRankingSystemDef[M] & Available
-
-export type AvailableRankingSystem<
-  M extends ActiveMode,
-  R extends AvailableRuleset<M>,
-> = ModeRulesetRankingSystemDef[M][R]
-
-export type RankingSystemDef =
-  ModeRulesetRankingSystemDef[ActiveMode][keyof ModeRulesetRankingSystemDef[ActiveMode]]
-
-export type PPRankingSystem =
-  RankingSystemDef['rankingSystem']['ppRankingSystem'][number]
-export type ScoreRankingSystem =
-  RankingSystemDef['rankingSystem']['scoreRankingSystem'][number]
-export type RankingSystem = PPRankingSystem | ScoreRankingSystem
-
-export type LeaderboardPPRankingSystem =
-  RankingSystemDef['leaderboardRankingSystem']['ppRankingSystem'][number]
-export type LeaderboardScoreRankingSystem =
-  RankingSystemDef['leaderboardRankingSystem']['scoreRankingSystem'][number]
-
-export type LeaderboardRankingSystem =
-  | LeaderboardPPRankingSystem
-  | LeaderboardScoreRankingSystem
-
-export type UserpageShowType = 'tab' | 'dropdown' | 'hidden'
-export type ServerConfig<
-  AvailableRankingSystem extends LeaderboardRankingSystem,
-> = Record<
-  AvailableRankingSystem,
-  {
-    userpage: {
-      show: UserpageShowType
-    }
-    name: string
-  }
->
+export type RulesetChecked<R> = R & { _checked: true }

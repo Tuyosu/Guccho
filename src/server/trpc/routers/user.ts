@@ -17,7 +17,7 @@ import { Logger } from '$base/logger'
 import { type MailTokenProvider as MBase, type MailTokenProvider } from '$base/server'
 import { type Mode } from '~/def'
 import { type RankingStatus } from '~/def/beatmap'
-import { type LeaderboardRankingSystem } from '~/def/common'
+import { type LeaderboardRankingSystem } from '$active'
 import { Mail } from '~/def/mail'
 import { GucchoError } from '~/def/messages'
 import { type RankingSystemScore } from '~/def/score'
@@ -62,6 +62,28 @@ export const router = _router({
         throw userNotFoundError
       }
       return mapId(user, UserProvider.idToString)
+    }),
+  statistic: optionalUserProcedure
+    .input(
+      object({
+        id: string(),
+        mode: zodMode,
+        ruleset: zodRuleset,
+        rankingSystem: zodLeaderboardRankingSystem,
+      }),
+    )
+    .query(async ({ input, ctx }) => {
+      const { mode, ruleset } = input
+      try {
+        return await users.getStatistic(
+          { id: UserProvider.stringToId(input.id), mode, ruleset },
+          ctx.user ? { id: UserProvider.stringToId(ctx.user.id) } : undefined
+        )
+      }
+      catch (e) {
+        console.error(e)
+        throw e
+      }
     }),
   best: optionalUserProcedure
     .input(
