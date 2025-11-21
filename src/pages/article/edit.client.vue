@@ -16,7 +16,7 @@ const article = ref<{
   json?: ArticleProvider.Content['json']
   owner?: ArticleProvider.Meta['owner']
   dynamic: boolean
-  slug: string
+  slug: ArticleProvider.Slug
 }>({
   privilege: {
     read: [Scope.Public],
@@ -25,14 +25,14 @@ const article = ref<{
 
   json: undefined,
   dynamic: false,
-  slug: app._route.query?.slug?.toString() || '',
+  slug: (app._route.query?.slug?.toString() || '') as ArticleProvider.Slug,
 })
 
 const access = shallowRef<Record<'write' | 'read', boolean>>()
 
 const { data: content, refresh: refreshContent } = await useAsyncData(async () => {
   if (article.value.slug) {
-    return app.$client.article.get.query(article.value.slug)
+    return app.$client.article.editor.get.query(article.value.slug)
   }
   return undefined
 })
@@ -127,7 +127,9 @@ async function save() {
     return
   }
 
-  await app.$client.article.save.mutate(article.value as Required<typeof article['value']>)
+  await app.$client.article.editor.save.mutate(article.value as Required<typeof article['value']>)
+
+  await refreshTree()
 }
 
 // Delete article from server
@@ -142,7 +144,7 @@ async function del() {
     return
   }
 
-  await app.$client.article.delete.mutate({
+  await app.$client.article.editor.delete.mutate({
     slug: article.value.slug,
   })
 }
@@ -212,7 +214,7 @@ de-DE:
       <ul v-if="articles" class="rounded-lg menu menu-xs bg-base-100 min-w-max">
         <tree
           v-bind="articles" @select="(entry) => {
-            article.slug = entry.path
+            article.slug = entry.path as ArticleProvider.Slug
             update()
             postFetch()
           }"
